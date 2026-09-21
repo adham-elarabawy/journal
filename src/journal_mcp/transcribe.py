@@ -13,7 +13,4 @@ def transcribe_audio(path: Path, model: str) -> str:
     with path.open("rb") as audio:
         response = client.audio.transcriptions.create(model=model, file=audio)
     text = getattr(response, "text", None)
-    if not text:
-        raise RuntimeError("The transcription API returned no text.")
-    return str(text).strip()
-
+    return str(text or "").strip()
