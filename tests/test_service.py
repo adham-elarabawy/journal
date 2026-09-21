@@ -53,3 +53,21 @@ def test_manual_status_survives_reclassification(tmp_path: Path) -> None:
     service.ensure_transcript(service.store.get("memo"))
     assert service.store.get("memo").journal_status == "journal"
 
+
+def test_preview_hides_full_transcript_and_exposes_analysis_note(tmp_path: Path) -> None:
+    memo = Memo(
+        "memo", tmp_path / "memo.m4a", datetime.now(timezone.utc), duration_seconds=120
+    )
+    service = JournalService(
+        Settings(None, tmp_path / "data", "test-model"),
+        scanner=lambda _override, limit=None: [memo],
+        transcriber=lambda _path, _model: "I have been thinking about moving. " * 20,
+    )
+    result = service.find_entries(transcription_budget=1)[0]
+    service.store.mark_analyzed(result.memo_id, True, "Discussed the tradeoffs around moving")
+    refreshed = service.store.get(result.memo_id)
+    preview = refreshed.public_dict(include_transcript=False)
+
+    assert "transcript" not in preview
+    assert preview["transcript_excerpt"].endswith("…")
+    assert preview["analysis_note"] == "Discussed the tradeoffs around moving"
