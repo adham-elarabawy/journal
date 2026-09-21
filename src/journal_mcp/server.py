@@ -48,7 +48,7 @@ def journal_status() -> dict[str, Any]:
 def find_journal_entries(
     query: str | None = None,
     include_analyzed: bool = False,
-    limit: int = 5,
+    limit: int = 8,
     scan_limit: int = 30,
     transcription_budget: int = 8,
 ) -> dict[str, Any]:
@@ -67,7 +67,14 @@ def find_journal_entries(
         transcription_budget=max(0, min(transcription_budget, 30)),
     )
     return {
-        "entries": [entry.public_dict(include_transcript=False) for entry in entries],
+        "entries": [
+            entry.public_dict(
+                include_transcript=False,
+                excerpt_chars=2000,
+                excerpt_query=query,
+            )
+            for entry in entries
+        ],
         "classification_note": (
             "'uncertain' entries need conversational judgment. User overrides always win."
         ),
