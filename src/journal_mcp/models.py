@@ -18,8 +18,11 @@ class Memo:
     journal_confidence: float | None = None
     journal_reason: str | None = None
     analyzed_at: datetime | None = None
+    analysis_note: str | None = None
 
-    def public_dict(self, include_path: bool = False) -> dict[str, Any]:
+    def public_dict(
+        self, *, include_path: bool = False, include_transcript: bool = True
+    ) -> dict[str, Any]:
         data = asdict(self)
         data["path"] = str(self.path) if include_path else None
         data["recorded_at"] = self.recorded_at.astimezone(timezone.utc).isoformat()
@@ -28,5 +31,9 @@ class Memo:
             if self.analyzed_at
             else None
         )
+        if not include_transcript:
+            transcript = data.pop("transcript")
+            data["transcript_excerpt"] = (
+                f"{transcript[:280].rstrip()}…" if transcript and len(transcript) > 280 else transcript
+            )
         return data
-
