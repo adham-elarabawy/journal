@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "journal-mcp"
+version = "0.1.0"
+description = "A private, read-mostly ChatGPT plugin for reflecting on Apple Voice Memos."
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=1.13.0,<2",
+  "openai>=1.101.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3"]
+
+[project.scripts]
+journal-mcp = "journal_mcp.server:main"
+journal-doctor = "journal_mcp.doctor:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/journal_mcp"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

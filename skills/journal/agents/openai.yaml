@@ -1,0 +1,4 @@
+interface:
+  display_name: "Journal"
+  short_description: "Reflect on journal entries from Voice Memos"
+  default_prompt: "Use @Journal to find my latest relevant voice memo, help me understand it, and mark it analyzed after we substantively discuss it."

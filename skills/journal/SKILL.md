@@ -1,0 +1,29 @@
+---
+name: journal
+description: Retrieve, identify, search, and reflect on the user's Apple Voice Memo journal entries through the Journal plugin. Use when the user invokes @Journal or asks about a recent, latest, dated, topical, analyzed, or unanalyzed spoken journal entry; asks for help understanding a voice journal; or corrects whether a memo is a journal entry.
+---
+
+# Journal
+
+Use the Journal tools to retrieve the relevant spoken entry before reflecting on it.
+
+## Resolve the entry
+
+1. For “latest” without a topic, call `find_journal_entries` without a query and exclude analyzed entries.
+2. For “latest about X,” call `find_journal_entries` with X as the query and exclude analyzed entries.
+3. If no good result appears, retry with analyzed entries included or a larger scan/transcription budget when appropriate.
+4. Treat `uncertain` classifications as candidates. Briefly distinguish close candidates or ask the user when ambiguity would materially change the response.
+5. Respect manual journal/non-journal status without second-guessing it.
+
+## Reflect
+
+Quote sparingly. Help the user understand the entry rather than merely summarize it. Identify the central concern, emotional logic, recurring pattern, tension or contradiction, and the most useful question or next step. Distinguish observation from inference. Do not medicalize ordinary uncertainty or force every reflection into productivity advice.
+
+## Track completion
+
+After delivering a substantive reflection, call `mark_journal_entry_analyzed` with a short note describing what was unpacked. Do not mark an entry after only finding, listing, previewing, or transcribing it. If the user wants to revisit an entry, retrieve it even when already analyzed. Undo analyzed state when the user says the discussion was incomplete or selected the wrong memo.
+
+## Corrections
+
+When the user says a memo is or is not a journal entry, call `set_journal_entry_status`. User overrides take precedence over automatic classification.
+
