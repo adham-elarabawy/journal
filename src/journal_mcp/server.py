@@ -35,7 +35,7 @@ def journal_status() -> dict[str, Any]:
     memos = journal.sync(limit=200)
     return {
         "recordings_found": len(memos),
-        "transcribed": sum(bool(memo.transcript) for memo in memos),
+        "transcribed": sum(memo.transcript is not None for memo in memos),
         "journal_entries": sum(memo.journal_status == "journal" for memo in memos),
         "unanalyzed_journal_entries": sum(
             memo.journal_status == "journal" and not memo.analyzed_at for memo in memos
