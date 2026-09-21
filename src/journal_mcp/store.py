@@ -141,5 +141,5 @@ class JournalStore:
             journal_confidence=row["journal_confidence"],
             journal_reason=row["journal_reason"],
             analyzed_at=datetime.fromisoformat(row["analyzed_at"]) if row["analyzed_at"] else None,
+            analysis_note=row["analysis_note"],
         )
-
