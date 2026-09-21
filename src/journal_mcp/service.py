@@ -31,7 +31,7 @@ class JournalService:
         return self.store.list_recent(limit)
 
     def ensure_transcript(self, memo: Memo) -> Memo:
-        if memo.transcript:
+        if memo.transcript is not None:
             return memo
         transcript = self.transcriber(memo.path, self.settings.transcription_model)
         self.store.save_transcript(memo.memo_id, transcript, self.settings.transcription_model)
@@ -63,7 +63,7 @@ class JournalService:
         for memo in memos:
             if memo.analyzed_at and not include_analyzed:
                 continue
-            if not memo.transcript and transcribed < transcription_budget:
+            if memo.transcript is None and transcribed < transcription_budget:
                 memo = self.ensure_transcript(memo)
                 transcribed += 1
             if memo.transcript and memo.journal_status in {"journal", "uncertain", "unknown"}:
