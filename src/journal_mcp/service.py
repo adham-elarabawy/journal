@@ -53,7 +53,7 @@ class JournalService:
         *,
         query: str | None = None,
         include_analyzed: bool = False,
-        limit: int = 5,
+        limit: int = 8,
         scan_limit: int = 30,
         transcription_budget: int = 8,
     ) -> list[Memo]:
@@ -89,4 +89,3 @@ class JournalService:
         )
         recency_bonus = memo.recorded_at.timestamp() / 1e11
         return exact * 2.0 + fuzzy + recency_bonus
-
