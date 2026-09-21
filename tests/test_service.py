@@ -66,8 +66,26 @@ def test_preview_hides_full_transcript_and_exposes_analysis_note(tmp_path: Path)
     result = service.find_entries(transcription_budget=1)[0]
     service.store.mark_analyzed(result.memo_id, True, "Discussed the tradeoffs around moving")
     refreshed = service.store.get(result.memo_id)
-    preview = refreshed.public_dict(include_transcript=False)
+    preview = refreshed.public_dict(include_transcript=False, excerpt_chars=2000)
 
     assert "transcript" not in preview
-    assert preview["transcript_excerpt"].endswith("…")
+    assert preview["transcript_excerpt"].startswith("I have been thinking about moving.")
     assert preview["analysis_note"] == "Discussed the tradeoffs around moving"
+
+
+def test_topic_preview_is_long_and_centered_on_match(tmp_path: Path) -> None:
+    transcript = f"{'Opening context. ' * 200}moving feels like the important decision{' Later context.' * 200}"
+    memo = Memo(
+        "memo", tmp_path / "memo.m4a", datetime.now(timezone.utc), transcript=transcript
+    )
+
+    preview = memo.public_dict(
+        include_transcript=False,
+        excerpt_chars=2000,
+        excerpt_query="moving",
+    )["transcript_excerpt"]
+
+    assert "moving feels like the important decision" in preview
+    assert 1900 <= len(preview) <= 2002
+    assert preview.startswith("…")
+    assert preview.endswith("…")
