@@ -53,6 +53,8 @@ def classify_journal_entry(
     title: str | None = None,
 ) -> Classification:
     """Conservative, explainable first pass; ChatGPT adjudicates ambiguity."""
+    if transcript is not None and not transcript.strip():
+        return Classification("not_journal", 1.0, "No speech was detected in the recording.")
     text = " ".join(filter(None, (title, transcript))).strip().lower()
     if not text:
         return Classification("unknown", 0.0, "No transcript is available yet.")
