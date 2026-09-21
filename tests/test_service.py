@@ -89,3 +89,26 @@ def test_topic_preview_is_long_and_centered_on_match(tmp_path: Path) -> None:
     assert 1900 <= len(preview) <= 2002
     assert preview.startswith("…")
     assert preview.endswith("…")
+
+
+def test_silent_recording_is_cached_and_not_retranscribed(tmp_path: Path) -> None:
+    memo = Memo("silent", tmp_path / "silent.m4a", datetime.now(timezone.utc), duration_seconds=3)
+    calls = 0
+
+    def transcriber(_path, _model):
+        nonlocal calls
+        calls += 1
+        return ""
+
+    service = JournalService(
+        Settings(None, tmp_path / "data", "test-model"),
+        scanner=lambda _override, limit=None: [memo],
+        transcriber=transcriber,
+    )
+    service.find_entries(transcription_budget=1)
+    service.find_entries(transcription_budget=1)
+
+    stored = service.store.get("silent")
+    assert calls == 1
+    assert stored.transcript == ""
+    assert stored.journal_status == "not_journal"
