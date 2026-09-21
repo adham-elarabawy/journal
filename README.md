@@ -21,7 +21,7 @@ Example prompts:
 
 Each recording receives a stable local ID and one journal classification: `journal`, `not_journal`, or `uncertain`. Journal also records whether an entry has been substantively analyzed, when that happened, and a short note about what was discussed. This state lives in the local SQLite index, so it persists across different ChatGPT conversations and computer restarts.
 
-Retrieval is staged. Topic matching and filtering happen locally against cached transcripts. A search returns only a small candidate set with metadata, classification, analyzed state, and short transcript excerpts. After ChatGPT selects the relevant candidate, it requests that one entry's full transcript. The complete archive is never placed into a chat at once.
+Retrieval is staged. Topic matching and filtering happen locally against cached transcripts. A search returns up to eight candidates by default, each with metadata, classification, analyzed state, and an excerpt of up to 2,000 characters. For topical searches, the excerpt is centered near a matching term rather than always showing the beginning. ChatGPT can expand the shortlist up to twenty when the match is ambiguous or older. After it selects the relevant candidate, it requests that one entry's full transcript. The complete archive is never placed into a chat at once.
 
 ## Transcription
 
