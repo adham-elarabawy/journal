@@ -11,7 +11,7 @@ Use the Journal tools to retrieve the relevant spoken entry before reflecting on
 
 1. For “latest” without a topic, call `find_journal_entries` without a query and exclude analyzed entries.
 2. For “latest about X,” call `find_journal_entries` with X as the query and exclude analyzed entries.
-3. If no good result appears, retry with analyzed entries included or a larger scan/transcription budget when appropriate.
+3. If no good result appears, retry with analyzed entries included, a shortlist of up to twenty, or a larger scan/transcription budget when appropriate.
 4. Treat `uncertain` classifications as candidates. Briefly distinguish close candidates or ask the user when ambiguity would materially change the response.
 5. Respect manual journal/non-journal status without second-guessing it.
 
@@ -26,4 +26,3 @@ After delivering a substantive reflection, call `mark_journal_entry_analyzed` wi
 ## Corrections
 
 When the user says a memo is or is not a journal entry, call `set_journal_entry_status`. User overrides take precedence over automatic classification.
-
