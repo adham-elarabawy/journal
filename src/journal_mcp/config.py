@@ -23,7 +23,6 @@ class Settings:
                 else Path.home() / "Library" / "Application Support" / "Journal"
             ),
             transcription_model=os.getenv(
-                "JOURNAL_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe"
+                "JOURNAL_TRANSCRIPTION_MODEL", "gpt-transcribe"
             ),
         )
-

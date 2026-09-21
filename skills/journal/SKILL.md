@@ -17,7 +17,11 @@ Use the Journal tools to retrieve the relevant spoken entry before reflecting on
 
 ## Reflect
 
-Quote sparingly. Help the user understand the entry rather than merely summarize it. Identify the central concern, emotional logic, recurring pattern, tension or contradiction, and the most useful question or next step. Distinguish observation from inference. Do not medicalize ordinary uncertainty or force every reflection into productivity advice.
+Reflection is opt-in. Use it when the user asks to reflect on, unpack, understand, structure, or get an opinion about an entry. Do not add reflection to a lookup, list, preview, or transcript-only request, and skip it whenever the user asks not to analyze the entry.
+
+Treat the transcript as a spoken journal entry. Help the user understand what they are feeling and thinking and structure their thoughts. Quote sparingly. Help them understand the entry rather than merely summarize it. Identify the central concern, emotional logic, recurring pattern, tension or contradiction, and the most useful question or next step. Distinguish observation from inference. Do not medicalize ordinary uncertainty or force every reflection into productivity advice.
+
+After a requested reflection, suggest a concise chat title in the format `YYYY-MM-DD — Short specific theme`, using the entry's recording date and its central subject. Title generation is also opt-in: omit it when the user asks for no title.
 
 ## Track completion
 

@@ -25,13 +25,13 @@ Retrieval is staged. Topic matching and filtering happen locally against cached 
 
 ## Transcription
 
-Voice Memos supplies the original audio files; Journal performs its own transcription through the OpenAI Audio API. It does not use Apple's Voice Memos transcripts. The default model is `gpt-4o-mini-transcribe`, configurable with `JOURNAL_TRANSCRIPTION_MODEL`.
+Voice Memos supplies the original audio files; Journal performs its own transcription through the OpenAI Audio API. It does not use Apple's Voice Memos transcripts. The default model is `gpt-transcribe`, configurable with `JOURNAL_TRANSCRIPTION_MODEL`.
 
-Journal transcribes lazily: a request scans recent recordings and sends only the recordings needed to resolve that request. Each transcript is cached in the local SQLite index, so the same recording is not transcribed repeatedly.
+Journal transcribes lazily: a request scans recent recordings and sends only the recordings needed to resolve that request. Each transcript is cached in the local SQLite index, so the same recording is not transcribed repeatedly. Recordings larger than the API's 25 MB upload limit are converted into smaller local chunks with `ffmpeg`. Completed chunk transcripts are cached as work progresses, so a retry resumes rather than retranscribing completed chunks.
 
 ## Install on the Mac
 
-Requirements: macOS, Python 3.11+, an OpenAI API key, and Voice Memos enabled in iCloud.
+Requirements: macOS, Python 3.11+, an OpenAI API key, Voice Memos enabled in iCloud, and `ffmpeg` for recordings larger than 25 MB. Install `ffmpeg` with `brew install ffmpeg` if needed.
 
 ```sh
 ./scripts/install_macos.sh

@@ -15,7 +15,13 @@ mcp = FastMCP(
         "Use these tools to find and retrieve the user's Apple Voice Memo journal entries. "
         "Prefer unanalyzed entries unless the user asks for an older or previously discussed entry. "
         "Low-confidence classifications are candidates, not facts. Mark an entry analyzed only after "
-        "a substantive reflection has been delivered, never after a preview or lookup alone."
+        "a substantive reflection has been delivered, never after a preview or lookup alone. "
+        "When the user asks to reflect on, unpack, understand, structure, or get an opinion about an "
+        "entry, treat it as a spoken journal entry: help the user understand what they are feeling and "
+        "thinking and structure their thoughts. End with a suggested chat title in the format "
+        "'YYYY-MM-DD — Short specific theme'. Reflection and title generation are opt-in behaviors: "
+        "do not add them to a lookup, list, or transcript-only request, and omit either when the user "
+        "asks not to receive it."
     ),
 )
 

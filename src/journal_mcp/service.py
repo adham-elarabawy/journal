@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from difflib import SequenceMatcher
+from functools import partial
 from typing import Callable
 
 from .classifier import classify_journal_entry
@@ -23,7 +24,14 @@ class JournalService:
         self.settings = settings
         self.store = JournalStore(settings.data_dir)
         self.scanner = scanner
-        self.transcriber = transcriber
+        self.transcriber = (
+            partial(
+                transcribe_audio,
+                cache_dir=settings.data_dir / "transcription-parts",
+            )
+            if transcriber is transcribe_audio
+            else transcriber
+        )
 
     def sync(self, limit: int = 50) -> list[Memo]:
         memos = self.scanner(self.settings.recordings_dir, limit=limit)
