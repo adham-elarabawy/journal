@@ -5,8 +5,8 @@ Journal is a private, local-first ChatGPT plugin for reflecting on Apple Voice M
 Example prompts:
 
 - `@Journal help me understand my latest journal entry.`
-- `@Journal give me your perspective on my latest entry about a decision I have been considering.`
-- `@Journal find the entry from last week where I was feeling overwhelmed.`
+- `@Journal find my latest entry about moving and help me weigh the tradeoffs I mentioned.`
+- `@Journal compare what I said this week about feeling overwhelmed with my previous entry on the same topic.`
 
 ## Design
 
@@ -16,6 +16,12 @@ Example prompts:
 - Journal classification is conservative and explainable. Ambiguous recordings remain candidates for ChatGPT or the user to adjudicate.
 - Filesystem access is bounded to known Voice Memos locations or `JOURNAL_VOICE_MEMOS_DIR`.
 - The plugin never edits or deletes Voice Memos.
+
+## Entry state and retrieval
+
+Each recording receives a stable local ID and one journal classification: `journal`, `not_journal`, or `uncertain`. Journal also records whether an entry has been substantively analyzed, when that happened, and a short note about what was discussed. This state lives in the local SQLite index, so it persists across different ChatGPT conversations and computer restarts.
+
+Retrieval is staged. Topic matching and filtering happen locally against cached transcripts. A search returns only a small candidate set with metadata, classification, analyzed state, and short transcript excerpts. After ChatGPT selects the relevant candidate, it requests that one entry's full transcript. The complete archive is never placed into a chat at once.
 
 ## Transcription
 
