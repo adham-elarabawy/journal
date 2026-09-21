@@ -24,3 +24,8 @@ def test_ambiguous_content_stays_uncertain() -> None:
     )
     assert result.status == "uncertain"
 
+
+def test_empty_transcript_is_not_journal() -> None:
+    result = classify_journal_entry("", duration_seconds=3, title="Recent Recording")
+    assert result.status == "not_journal"
+    assert result.confidence == 1.0
