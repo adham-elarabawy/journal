@@ -54,9 +54,10 @@ def find_journal_entries(
 ) -> dict[str, Any]:
     """Find the latest journal-like Voice Memos, optionally about a topic.
 
-    Use query for requests such as "latest entry about the company". By default this
+    Use query for requests such as "latest entry about a difficult decision". By default this
     excludes entries already substantively analyzed. It may transcribe a bounded number
-    of recent recordings to identify journal entries.
+    of recent recordings to identify journal entries. Results contain metadata and short
+    excerpts; call get_journal_entry for the selected entry's full transcript.
     """
     entries = service().find_entries(
         query=query,
@@ -66,7 +67,7 @@ def find_journal_entries(
         transcription_budget=max(0, min(transcription_budget, 30)),
     )
     return {
-        "entries": [entry.public_dict() for entry in entries],
+        "entries": [entry.public_dict(include_transcript=False) for entry in entries],
         "classification_note": (
             "'uncertain' entries need conversational judgment. User overrides always win."
         ),
@@ -93,7 +94,7 @@ def set_journal_entry_status(memo_id: str, is_journal: bool) -> dict[str, Any]:
     memo = journal.store.get(memo_id)
     if memo is None:
         raise ValueError(f"Unknown memo_id: {memo_id}")
-    return memo.public_dict()
+    return memo.public_dict(include_transcript=False)
 
 
 @mcp.tool(annotations=WRITE_LOCAL)
@@ -110,7 +111,7 @@ def mark_journal_entry_analyzed(
     memo = journal.store.get(memo_id)
     if memo is None:
         raise ValueError(f"Unknown memo_id: {memo_id}")
-    return memo.public_dict()
+    return memo.public_dict(include_transcript=False)
 
 
 def main() -> None:
@@ -119,4 +120,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
