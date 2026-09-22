@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import date
 from difflib import SequenceMatcher
 from functools import partial
 from typing import Callable
@@ -32,6 +33,7 @@ class JournalService:
             if transcriber is transcribe_audio
             else transcriber
         )
+        self.last_find_failures: list[dict[str, object]] = []
 
     def sync(self, limit: int = 50) -> list[Memo]:
         memos = self.scanner(self.settings.recordings_dir, limit=limit)
@@ -41,7 +43,11 @@ class JournalService:
     def ensure_transcript(self, memo: Memo) -> Memo:
         if memo.transcript is not None:
             return memo
-        transcript = self.transcriber(memo.path, self.settings.transcription_model)
+        try:
+            transcript = self.transcriber(memo.path, self.settings.transcription_model)
+        except Exception as exc:
+            self.store.save_transcription_error(memo.memo_id, str(exc))
+            raise
         self.store.save_transcript(memo.memo_id, transcript, self.settings.transcription_model)
         classification = classify_journal_entry(
             transcript, duration_seconds=memo.duration_seconds, title=memo.title
@@ -63,14 +69,37 @@ class JournalService:
         limit: int = 1,
         scan_limit: int = 30,
         transcription_budget: int = 1,
+        recorded_on: str | None = None,
+        retry_failed: bool = False,
     ) -> list[Memo]:
         memos = self.sync(limit=scan_limit)
+        if recorded_on:
+            try:
+                target_date = date.fromisoformat(recorded_on)
+            except ValueError as exc:
+                raise ValueError("recorded_on must use YYYY-MM-DD format") from exc
+            memos = [
+                memo
+                for memo in memos
+                if memo.recorded_at.astimezone().date() == target_date
+            ]
         prepared: list[Memo] = []
+        self.last_find_failures = []
         transcribed = 0
         for memo in memos:
-            if memo.transcript is None and transcribed < transcription_budget:
-                memo = self.ensure_transcript(memo)
+            if memo.transcript is None:
+                if memo.transcription_error and not retry_failed:
+                    self.last_find_failures.append(self._failure_dict(memo))
+                    continue
+                if transcribed >= transcription_budget:
+                    continue
                 transcribed += 1
+                try:
+                    memo = self.ensure_transcript(memo)
+                except Exception as exc:
+                    failed = self.store.get(memo.memo_id) or memo
+                    self.last_find_failures.append(self._failure_dict(failed, str(exc)))
+                    continue
             if memo.transcript and memo.journal_status in {"journal", "uncertain", "unknown"}:
                 prepared.append(memo)
                 if not query and len(prepared) >= limit:
@@ -82,6 +111,16 @@ class JournalService:
         else:
             prepared.sort(key=lambda memo: memo.recorded_at, reverse=True)
         return prepared[:limit]
+
+    @staticmethod
+    def _failure_dict(memo: Memo, error: str | None = None) -> dict[str, object]:
+        return {
+            "memo_id": memo.memo_id,
+            "recorded_at": memo.recorded_at.isoformat(),
+            "title": memo.title,
+            "error": error or memo.transcription_error or "Unknown transcription error",
+            "attempts": memo.transcription_attempts,
+        }
 
     @staticmethod
     def _search_score(query: str, memo: Memo) -> float:

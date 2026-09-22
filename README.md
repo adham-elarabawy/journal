@@ -29,6 +29,15 @@ Voice Memos supplies the original audio files; Journal performs its own transcri
 
 Journal transcribes lazily: a request scans recent recordings and sends only the recordings needed to resolve that request. Each transcript is cached in the local SQLite index, so the same recording is not transcribed repeatedly. Recordings larger than the API's 25 MB upload limit are converted into smaller local chunks with `ffmpeg`. Completed chunk transcripts are cached as work progresses, so a retry resumes rather than retranscribing completed chunks.
 
+Dated retrieval is bounded before transcription, so asking for today's entry does not walk into
+older recordings. A corrupt or unsupported recording is saved as a per-memo failure and skipped
+instead of aborting the entire search.
+
+Archive transcription is available as an explicit background backfill. Starting it returns
+immediately, works newest-first, resumes from cached transcripts, and skips known failures unless a
+retry is requested. ChatGPT reports a concise progress summary when the job starts and whenever the
+user asks for backfill status. It cannot post unsolicited messages after a ChatGPT turn has ended.
+
 ## Install on the Mac
 
 Requirements: macOS, Python 3.11+, an OpenAI API key, Voice Memos enabled in iCloud, and `ffmpeg` for recordings larger than 25 MB. Install `ffmpeg` with `brew install ffmpeg` if needed.
@@ -66,6 +75,9 @@ You do not need to rerun the installer or manually import new recordings. If the
 
 - `journal_status`: verify discovery and inspect index counts.
 - `find_journal_entries`: retrieve recent or topic-matched entries with analyzed state included as metadata.
+- `start_journal_backfill`: begin resumable background transcription of older memos after explicit confirmation.
+- `journal_backfill_status`: return chat-ready progress, current-item metadata, and recent failures.
+- `stop_journal_backfill`: pause the job after its current memo.
 - `get_journal_entry`: retrieve and, if necessary, transcribe one entry.
 - `set_journal_entry_status`: correct an automatic journal classification.
 - `mark_journal_entry_analyzed`: record that an entry was substantively unpacked; reversible.

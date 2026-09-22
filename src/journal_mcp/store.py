@@ -27,6 +27,9 @@ class JournalStore:
                 duration_seconds REAL,
                 transcript TEXT,
                 transcript_model TEXT,
+                transcription_error TEXT,
+                transcription_error_at TEXT,
+                transcription_attempts INTEGER NOT NULL DEFAULT 0,
                 journal_status TEXT NOT NULL DEFAULT 'unknown',
                 journal_confidence REAL,
                 journal_reason TEXT,
@@ -39,6 +42,17 @@ class JournalStore:
             CREATE INDEX IF NOT EXISTS memos_journal_status ON memos(journal_status);
             """
         )
+        columns = {
+            row[1] for row in self.connection.execute("PRAGMA table_info(memos)").fetchall()
+        }
+        additions = {
+            "transcription_error": "TEXT",
+            "transcription_error_at": "TEXT",
+            "transcription_attempts": "INTEGER NOT NULL DEFAULT 0",
+        }
+        for name, definition in additions.items():
+            if name not in columns:
+                self.connection.execute(f"ALTER TABLE memos ADD COLUMN {name} {definition}")
         self.connection.commit()
 
     def upsert_scanned(self, memos: list[Memo]) -> None:
@@ -84,10 +98,24 @@ class JournalStore:
     def save_transcript(self, memo_id: str, transcript: str, model: str) -> None:
         self.connection.execute(
             """
-            UPDATE memos SET transcript = ?, transcript_model = ?, updated_at = ?
+            UPDATE memos SET transcript = ?, transcript_model = ?,
+                transcription_error = NULL, transcription_error_at = NULL,
+                updated_at = ?
             WHERE memo_id = ?
             """,
             (transcript, model, datetime.now(timezone.utc).isoformat(), memo_id),
+        )
+        self.connection.commit()
+
+    def save_transcription_error(self, memo_id: str, error: str) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        self.connection.execute(
+            """
+            UPDATE memos SET transcription_error = ?, transcription_error_at = ?,
+                transcription_attempts = transcription_attempts + 1, updated_at = ?
+            WHERE memo_id = ?
+            """,
+            (error[:4000], now, now, memo_id),
         )
         self.connection.commit()
 
@@ -137,6 +165,13 @@ class JournalStore:
             title=row["title"],
             duration_seconds=row["duration_seconds"],
             transcript=row["transcript"],
+            transcription_error=row["transcription_error"],
+            transcription_error_at=(
+                datetime.fromisoformat(row["transcription_error_at"])
+                if row["transcription_error_at"]
+                else None
+            ),
+            transcription_attempts=row["transcription_attempts"] or 0,
             journal_status=row["journal_status"],
             journal_confidence=row["journal_confidence"],
             journal_reason=row["journal_reason"],

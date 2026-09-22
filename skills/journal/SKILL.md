@@ -10,14 +10,27 @@ Use the Journal tools to retrieve the relevant spoken entry before reflecting on
 ## Resolve the entry
 
 1. For “latest” without a topic, call `find_journal_entries` without a query.
-2. For “latest about X,” call `find_journal_entries` with X as the query.
-3. Analyzed state is metadata only. Never exclude an entry merely because it was discussed. If the
+2. For “today” or another calendar date, call `find_journal_entries` with `recorded_on` in
+   `YYYY-MM-DD` format. Do not pass date words such as “today” as a topic query.
+3. For “latest about X,” call `find_journal_entries` with X as the query.
+4. Analyzed state is metadata only. Never exclude an entry merely because it was discussed. If the
    user explicitly asks for an unanalyzed entry, request a larger shortlist when necessary and use
    the returned analyzed metadata to choose one.
-4. If no good result appears, use a larger shortlist or transcription budget only for genuinely
+5. If one recording fails transcription, report it only when relevant and continue with other
+   candidates. Never let a broken historical recording block a dated or latest-entry result.
+6. If no good result appears, use a larger shortlist or transcription budget only for genuinely
    broad or topical searches.
-5. Treat `uncertain` classifications as candidates. Briefly distinguish close candidates or ask the user when ambiguity would materially change the response.
-6. Respect manual journal/non-journal status without second-guessing it.
+7. Treat `uncertain` classifications as candidates. Briefly distinguish close candidates or ask the user when ambiguity would materially change the response.
+8. Respect manual journal/non-journal status without second-guessing it.
+
+## Archive backfill
+
+Only call `start_journal_backfill` after the user explicitly asks to begin because it uploads old
+recordings and can incur API usage. It runs in the background and resumes from cached transcripts.
+Repeat its returned `summary` in the chat. When the user asks how it is going, call
+`journal_backfill_status` and repeat the returned `summary`; include the current entry or recent
+failures only when useful. Use `stop_journal_backfill` when the user asks to pause or stop it.
+Do not imply that the plugin can post unsolicited updates after the current ChatGPT turn ends.
 
 ## Reflect
 

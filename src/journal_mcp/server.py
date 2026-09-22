@@ -5,6 +5,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
+from .backfill import backfill_manager
 from .config import Settings
 from .service import JournalService
 
@@ -22,7 +23,9 @@ mcp = FastMCP(
         "thinking and structure their thoughts. End with a suggested chat title in the format "
         "'YYYY-MM-DD — Short specific theme'. Reflection and title generation are opt-in behaviors: "
         "do not add them to a lookup, list, or transcript-only request, and omit either when the user "
-        "asks not to receive it."
+        "asks not to receive it. For dated requests, pass recorded_on so unrelated older memos are "
+        "never transcribed. A failed recording must not block another result. When starting or "
+        "checking archive backfill, repeat the returned summary in the chat response."
     ),
 )
 
@@ -48,6 +51,7 @@ def journal_status() -> dict[str, Any]:
             memo.journal_status == "journal" and not memo.analyzed_at for memo in memos
         ),
         "data_file": str(journal.store.path),
+        "backfill": backfill_manager.status(journal.settings),
     }
 
 
@@ -57,20 +61,27 @@ def find_journal_entries(
     limit: int = 1,
     scan_limit: int = 30,
     transcription_budget: int = 1,
+    recorded_on: str | None = None,
+    retry_failed: bool = False,
 ) -> dict[str, Any]:
     """Find the latest journal-like Voice Memos, optionally about a topic.
 
-    Use query for requests such as "latest entry about a difficult decision". Analyzed entries
+    Use query for requests such as "latest entry about a difficult decision". For "today" or
+    another calendar date, pass recorded_on in YYYY-MM-DD format instead of putting the date in
+    query. Analyzed entries
     remain eligible and expose their analyzed state as metadata. A latest-entry lookup defaults
     to one result and at most one new transcription. Increase the budget only for broader topical
-    searches. Results contain metadata and short excerpts; call get_journal_entry for the full
-    transcript.
+    searches. Failed recordings are reported and skipped so they cannot block another result.
+    Results contain metadata and short excerpts; call get_journal_entry for the full transcript.
     """
-    entries = service().find_entries(
+    journal = service()
+    entries = journal.find_entries(
         query=query,
         limit=max(1, min(limit, 20)),
         scan_limit=max(1, min(scan_limit, 200)),
         transcription_budget=max(0, min(transcription_budget, 30)),
+        recorded_on=recorded_on,
+        retry_failed=retry_failed,
     )
     return {
         "entries": [
@@ -84,7 +95,31 @@ def find_journal_entries(
         "classification_note": (
             "'uncertain' entries need conversational judgment. User overrides always win."
         ),
+        "transcription_failures": journal.last_find_failures,
     }
+
+
+@mcp.tool(annotations=WRITE_LOCAL)
+def start_journal_backfill(retry_failed: bool = False) -> dict[str, Any]:
+    """Start resumable archive transcription in the background and return immediately.
+
+    This uploads previously untranscribed Voice Memos to the configured OpenAI transcription
+    model and may incur API usage. Call only when the user explicitly asks to start. Previously
+    failed recordings are skipped unless retry_failed is true. Repeat the returned summary in chat.
+    """
+    return backfill_manager.start(Settings.from_env(), retry_failed=retry_failed)
+
+
+@mcp.tool(annotations=READ_ONLY)
+def journal_backfill_status() -> dict[str, Any]:
+    """Report archive transcription progress. Repeat the returned summary in chat."""
+    return backfill_manager.status(Settings.from_env())
+
+
+@mcp.tool(annotations=WRITE_LOCAL)
+def stop_journal_backfill() -> dict[str, Any]:
+    """Ask the background archive transcription job to pause after its current memo."""
+    return backfill_manager.stop(Settings.from_env())
 
 
 @mcp.tool(annotations=READ_ONLY)

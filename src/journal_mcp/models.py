@@ -15,6 +15,9 @@ class Memo:
     title: str | None = None
     duration_seconds: float | None = None
     transcript: str | None = None
+    transcription_error: str | None = None
+    transcription_error_at: datetime | None = None
+    transcription_attempts: int = 0
     journal_status: str = "unknown"
     journal_confidence: float | None = None
     journal_reason: str | None = None
@@ -35,6 +38,11 @@ class Memo:
         data["analyzed_at"] = (
             self.analyzed_at.astimezone(timezone.utc).isoformat()
             if self.analyzed_at
+            else None
+        )
+        data["transcription_error_at"] = (
+            self.transcription_error_at.astimezone(timezone.utc).isoformat()
+            if self.transcription_error_at
             else None
         )
         if not include_transcript:
