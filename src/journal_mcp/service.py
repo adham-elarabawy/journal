@@ -14,6 +14,20 @@ from .transcribe import transcribe_audio
 from .voice_memos import scan_voice_memos
 
 
+def is_filesystem_permission_error(exc: BaseException) -> bool:
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, PermissionError):
+            return True
+        message = str(current).lower()
+        if "operation not permitted" in message or "permission denied" in message:
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 class JournalService:
     def __init__(
         self,
@@ -46,7 +60,8 @@ class JournalService:
         try:
             transcript = self.transcriber(memo.path, self.settings.transcription_model)
         except Exception as exc:
-            self.store.save_transcription_error(memo.memo_id, str(exc))
+            if not is_filesystem_permission_error(exc):
+                self.store.save_transcription_error(memo.memo_id, str(exc))
             raise
         self.store.save_transcript(memo.memo_id, transcript, self.settings.transcription_model)
         classification = classify_journal_entry(

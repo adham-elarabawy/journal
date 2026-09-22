@@ -231,3 +231,24 @@ def test_failed_historical_recording_does_not_abort_search(tmp_path: Path) -> No
 
     service.find_entries(query="moving", transcription_budget=1)
     assert service.store.get("broken").transcription_attempts == 1
+
+
+def test_filesystem_permission_error_is_not_persisted_as_bad_recording(
+    tmp_path: Path,
+) -> None:
+    memo = Memo("protected", tmp_path / "protected.m4a", datetime.now(timezone.utc))
+    service = JournalService(
+        Settings(None, tmp_path / "data", "test-model"),
+        scanner=lambda _override, limit=None: [memo],
+        transcriber=lambda _path, _model: (_ for _ in ()).throw(
+            PermissionError("Operation not permitted")
+        ),
+    )
+
+    results = service.find_entries(transcription_budget=1)
+
+    assert results == []
+    stored = service.store.get("protected")
+    assert stored is not None
+    assert stored.transcription_error is None
+    assert stored.transcription_attempts == 0

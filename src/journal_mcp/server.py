@@ -24,8 +24,10 @@ mcp = FastMCP(
         "'YYYY-MM-DD — Short specific theme'. Reflection and title generation are opt-in behaviors: "
         "do not add them to a lookup, list, or transcript-only request, and omit either when the user "
         "asks not to receive it. For dated requests, pass recorded_on so unrelated older memos are "
-        "never transcribed. A failed recording must not block another result. When starting or "
-        "checking archive backfill, repeat the returned summary in the chat response."
+        "never transcribed. A failed recording must not block another result. When the user "
+        "explicitly asks to start archive backfill, call start_journal_backfill directly; do not "
+        "substitute journal_status or journal_backfill_status. When starting or checking archive "
+        "backfill, repeat the returned summary in the chat response."
     ),
 )
 

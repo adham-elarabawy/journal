@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import Settings
-from .service import JournalService
+from .service import JournalService, is_filesystem_permission_error
 
 
 class BackfillManager:
@@ -113,6 +113,22 @@ class BackfillManager:
                     journal.ensure_transcript(memo)
                     state["completed"] += 1
                 except Exception as exc:
+                    if is_filesystem_permission_error(exc):
+                        state.update(
+                            {
+                                "status": "blocked",
+                                "fatal_error": (
+                                    "macOS denied access to the Voice Memos recordings folder. "
+                                    "Run backfill through the same authorized Journal tunnel process "
+                                    "or grant that process Full Disk Access."
+                                ),
+                                "failure_type": "filesystem_permission",
+                                "current_entry": None,
+                                "updated_at": self._now(),
+                            }
+                        )
+                        self._write_state(settings, state)
+                        return
                     state["failed"] += 1
                     state["failures"] = (
                         state["failures"]
@@ -170,6 +186,14 @@ class BackfillManager:
         status = result.get("status", "unknown")
         if status == "idle":
             summary = "Journal archive backfill has not been started."
+        elif status == "blocked" and result.get("failure_type") == "filesystem_permission":
+            completed = int(result.get("completed", 0))
+            target = int(result.get("target_count", 0))
+            remaining = int(result.get("remaining", 0))
+            summary = (
+                "Journal backfill is blocked by macOS permission to read Voice Memos: "
+                f"{completed}/{target} newly transcribed, {remaining} remaining."
+            )
         else:
             completed = int(result.get("completed", 0))
             target = int(result.get("target_count", 0))
