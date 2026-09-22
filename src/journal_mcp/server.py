@@ -13,7 +13,8 @@ mcp = FastMCP(
     "Journal",
     instructions=(
         "Use these tools to find and retrieve the user's Apple Voice Memo journal entries. "
-        "Prefer unanalyzed entries unless the user asks for an older or previously discussed entry. "
+        "Analyzed state is metadata only; never exclude an entry merely because it was discussed. "
+        "Choose entries by the user's requested date, recency, and topic. "
         "Low-confidence classifications are candidates, not facts. Mark an entry analyzed only after "
         "a substantive reflection has been delivered, never after a preview or lookup alone. "
         "When the user asks to reflect on, unpack, understand, structure, or get an opinion about an "
@@ -53,21 +54,20 @@ def journal_status() -> dict[str, Any]:
 @mcp.tool(annotations=READ_ONLY)
 def find_journal_entries(
     query: str | None = None,
-    include_analyzed: bool = False,
-    limit: int = 8,
+    limit: int = 1,
     scan_limit: int = 30,
-    transcription_budget: int = 8,
+    transcription_budget: int = 1,
 ) -> dict[str, Any]:
     """Find the latest journal-like Voice Memos, optionally about a topic.
 
-    Use query for requests such as "latest entry about a difficult decision". By default this
-    excludes entries already substantively analyzed. It may transcribe a bounded number
-    of recent recordings to identify journal entries. Results contain metadata and short
-    excerpts; call get_journal_entry for the selected entry's full transcript.
+    Use query for requests such as "latest entry about a difficult decision". Analyzed entries
+    remain eligible and expose their analyzed state as metadata. A latest-entry lookup defaults
+    to one result and at most one new transcription. Increase the budget only for broader topical
+    searches. Results contain metadata and short excerpts; call get_journal_entry for the full
+    transcript.
     """
     entries = service().find_entries(
         query=query,
-        include_analyzed=include_analyzed,
         limit=max(1, min(limit, 20)),
         scan_limit=max(1, min(scan_limit, 200)),
         transcription_budget=max(0, min(transcription_budget, 30)),

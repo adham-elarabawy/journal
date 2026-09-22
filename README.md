@@ -21,7 +21,7 @@ Example prompts:
 
 Each recording receives a stable local ID and one journal classification: `journal`, `not_journal`, or `uncertain`. Journal also records whether an entry has been substantively analyzed, when that happened, and a short note about what was discussed. This state lives in the local SQLite index, so it persists across different ChatGPT conversations and computer restarts.
 
-Retrieval is staged. Topic matching and filtering happen locally against cached transcripts. A search returns up to eight candidates by default, each with metadata, classification, analyzed state, and an excerpt of up to 2,000 characters. For topical searches, the excerpt is centered near a matching term rather than always showing the beginning. ChatGPT can expand the shortlist up to twenty when the match is ambiguous or older. After it selects the relevant candidate, it requests that one entry's full transcript. The complete archive is never placed into a chat at once.
+Retrieval is staged. Topic matching happens locally against cached transcripts. Analyzed entries remain eligible and expose that state as metadata rather than being silently filtered out. A latest-entry search returns one candidate by default with metadata, classification, analyzed state, and an excerpt of up to 2,000 characters. For topical searches, the excerpt is centered near a matching term rather than always showing the beginning. ChatGPT can expand the shortlist up to twenty when the match is ambiguous or the user explicitly wants an unanalyzed entry. After it selects the relevant candidate, it requests that one entry's full transcript. The complete archive is never placed into a chat at once.
 
 ## Transcription
 
@@ -65,7 +65,7 @@ You do not need to rerun the installer or manually import new recordings. If the
 ## Tools
 
 - `journal_status`: verify discovery and inspect index counts.
-- `find_journal_entries`: retrieve recent or topic-matched entries, excluding analyzed entries by default.
+- `find_journal_entries`: retrieve recent or topic-matched entries with analyzed state included as metadata.
 - `get_journal_entry`: retrieve and, if necessary, transcribe one entry.
 - `set_journal_entry_status`: correct an automatic journal classification.
 - `mark_journal_entry_analyzed`: record that an entry was substantively unpacked; reversible.

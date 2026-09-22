@@ -60,22 +60,21 @@ class JournalService:
         self,
         *,
         query: str | None = None,
-        include_analyzed: bool = False,
-        limit: int = 8,
+        limit: int = 1,
         scan_limit: int = 30,
-        transcription_budget: int = 8,
+        transcription_budget: int = 1,
     ) -> list[Memo]:
         memos = self.sync(limit=scan_limit)
         prepared: list[Memo] = []
         transcribed = 0
         for memo in memos:
-            if memo.analyzed_at and not include_analyzed:
-                continue
             if memo.transcript is None and transcribed < transcription_budget:
                 memo = self.ensure_transcript(memo)
                 transcribed += 1
             if memo.transcript and memo.journal_status in {"journal", "uncertain", "unknown"}:
                 prepared.append(memo)
+                if not query and len(prepared) >= limit:
+                    break
 
         if query:
             prepared.sort(key=lambda memo: self._search_score(query, memo), reverse=True)

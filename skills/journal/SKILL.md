@@ -9,11 +9,15 @@ Use the Journal tools to retrieve the relevant spoken entry before reflecting on
 
 ## Resolve the entry
 
-1. For “latest” without a topic, call `find_journal_entries` without a query and exclude analyzed entries.
-2. For “latest about X,” call `find_journal_entries` with X as the query and exclude analyzed entries.
-3. If no good result appears, retry with analyzed entries included, a shortlist of up to twenty, or a larger scan/transcription budget when appropriate.
-4. Treat `uncertain` classifications as candidates. Briefly distinguish close candidates or ask the user when ambiguity would materially change the response.
-5. Respect manual journal/non-journal status without second-guessing it.
+1. For “latest” without a topic, call `find_journal_entries` without a query.
+2. For “latest about X,” call `find_journal_entries` with X as the query.
+3. Analyzed state is metadata only. Never exclude an entry merely because it was discussed. If the
+   user explicitly asks for an unanalyzed entry, request a larger shortlist when necessary and use
+   the returned analyzed metadata to choose one.
+4. If no good result appears, use a larger shortlist or transcription budget only for genuinely
+   broad or topical searches.
+5. Treat `uncertain` classifications as candidates. Briefly distinguish close candidates or ask the user when ambiguity would materially change the response.
+6. Respect manual journal/non-journal status without second-guessing it.
 
 ## Reflect
 

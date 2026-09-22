@@ -6,7 +6,7 @@ from journal_mcp.models import Memo
 from journal_mcp.service import JournalService
 
 
-def test_find_latest_unanalyzed_entry_about_topic(tmp_path: Path) -> None:
+def test_analyzed_entry_remains_eligible_for_topic_search(tmp_path: Path) -> None:
     now = datetime.now(timezone.utc)
     memos = [
         Memo("old", tmp_path / "old.m4a", now - timedelta(days=2), title="Older thought", duration_seconds=100),
@@ -35,7 +35,8 @@ def test_find_latest_unanalyzed_entry_about_topic(tmp_path: Path) -> None:
 
     service.store.mark_analyzed("new", True, "Discussed moving tradeoffs")
     results = service.find_entries(query="moving", transcription_budget=0)
-    assert [memo.memo_id for memo in results] == ["old"]
+    assert [memo.memo_id for memo in results] == ["new"]
+    assert results[0].analyzed_at is not None
 
 
 def test_manual_status_survives_reclassification(tmp_path: Path) -> None:
@@ -112,3 +113,57 @@ def test_silent_recording_is_cached_and_not_retranscribed(tmp_path: Path) -> Non
     assert calls == 1
     assert stored.transcript == ""
     assert stored.journal_status == "not_journal"
+
+
+def test_latest_lookup_stops_after_first_journal_entry(tmp_path: Path) -> None:
+    now = datetime.now(timezone.utc)
+    memos = [
+        Memo(str(index), tmp_path / f"{index}.m4a", now - timedelta(hours=index))
+        for index in range(3)
+    ]
+    calls = []
+
+    def transcriber(path, _model):
+        calls.append(path.name)
+        return "I have been reflecting on this decision and how it affects my life. " * 5
+
+    service = JournalService(
+        Settings(None, tmp_path / "data", "test-model"),
+        scanner=lambda _override, limit=None: memos[:limit],
+        transcriber=transcriber,
+    )
+
+    results = service.find_entries()
+
+    assert [memo.memo_id for memo in results] == ["0"]
+    assert calls == ["0.m4a"]
+
+
+def test_latest_can_reuse_analyzed_entry_without_transcribing_older_memos(
+    tmp_path: Path,
+) -> None:
+    now = datetime.now(timezone.utc)
+    latest = Memo(
+        "latest",
+        tmp_path / "latest.m4a",
+        now,
+        transcript="I have been thinking about a difficult decision. " * 5,
+        journal_status="journal",
+    )
+    older = Memo("older", tmp_path / "older.m4a", now - timedelta(days=1))
+    calls = []
+
+    service = JournalService(
+        Settings(None, tmp_path / "data", "test-model"),
+        scanner=lambda _override, limit=None: [latest, older][:limit],
+        transcriber=lambda path, _model: calls.append(path.name) or "unexpected",
+    )
+    service.sync()
+    service.store.save_transcript(latest.memo_id, latest.transcript or "", "test-model")
+    service.store.save_classification(latest.memo_id, "journal", 0.9, "Reflective entry")
+    service.store.mark_analyzed(latest.memo_id, True, "Previously discussed")
+
+    results = service.find_entries(transcription_budget=0)
+
+    assert [memo.memo_id for memo in results] == ["latest"]
+    assert calls == []
