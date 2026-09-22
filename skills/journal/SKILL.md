@@ -25,9 +25,12 @@ Use the Journal tools to retrieve the relevant spoken entry before reflecting on
 
 ## Archive backfill
 
-Only call `start_journal_backfill` after the user explicitly asks to begin because it uploads old
-recordings and can incur API usage. It runs in the background and resumes from cached transcripts.
-Repeat its returned `summary` in the chat. When the user asks how it is going, call
+When the user asks to start backfill, first call `journal_backfill_status`. If it is already
+starting, running, or completed, report that state without calling Start again. Only call
+`start_journal_backfill` when no job is active and the user explicitly asks to begin, since it
+uploads old recordings and can incur API usage. A completed job needs a new explicit request to
+scan newly arrived recordings or retry known failures. It runs in the background and resumes
+from cached transcripts. Repeat the returned `summary` in the chat. For a progress request, call
 `journal_backfill_status` and repeat the returned `summary`; include the current entry or recent
 failures only when useful. Use `stop_journal_backfill` when the user asks to pause or stop it.
 Do not imply that the plugin can post unsolicited updates after the current ChatGPT turn ends.

@@ -186,6 +186,11 @@ class BackfillManager:
         status = result.get("status", "unknown")
         if status == "idle":
             summary = "Journal archive backfill has not been started."
+        elif status == "starting":
+            summary = (
+                "Journal backfill is starting and counting pending recordings. "
+                "Check status shortly for progress."
+            )
         elif status == "blocked" and result.get("failure_type") == "filesystem_permission":
             completed = int(result.get("completed", 0))
             target = int(result.get("target_count", 0))
@@ -205,7 +210,8 @@ class BackfillManager:
                 f"{remaining} remaining, {failed} failed."
             )
             if skipped:
-                summary += f" {skipped} known failures were skipped."
+                noun = "failure was" if skipped == 1 else "failures were"
+                summary += f" {skipped} known {noun} skipped."
         result["summary"] = summary
         return result
 

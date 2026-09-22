@@ -25,9 +25,12 @@ mcp = FastMCP(
         "do not add them to a lookup, list, or transcript-only request, and omit either when the user "
         "asks not to receive it. For dated requests, pass recorded_on so unrelated older memos are "
         "never transcribed. A failed recording must not block another result. When the user "
-        "explicitly asks to start archive backfill, call start_journal_backfill directly; do not "
-        "substitute journal_status or journal_backfill_status. When starting or checking archive "
-        "backfill, repeat the returned summary in the chat response."
+        "asks to start archive backfill, first call journal_backfill_status. If it is already "
+        "starting, running, or completed, report that state without calling start again. Only "
+        "call start_journal_backfill when no job is active and the user explicitly wants one; "
+        "a completed job needs a new explicit request to scan newly arrived recordings or retry "
+        "known failures. When starting or checking archive backfill, repeat the returned summary "
+        "in the chat response."
     ),
 )
 
@@ -106,8 +109,9 @@ def start_journal_backfill(retry_failed: bool = False) -> dict[str, Any]:
     """Start resumable archive transcription in the background and return immediately.
 
     This uploads previously untranscribed Voice Memos to the configured OpenAI transcription
-    model and may incur API usage. Call only when the user explicitly asks to start. Previously
-    failed recordings are skipped unless retry_failed is true. Repeat the returned summary in chat.
+    model and may incur API usage. Check journal_backfill_status first; do not call this again
+    for an active or completed job unless the user explicitly wants a new scan. Previously failed
+    recordings are skipped unless retry_failed is true. Repeat the returned summary in chat.
     """
     return backfill_manager.start(Settings.from_env(), retry_failed=retry_failed)
 

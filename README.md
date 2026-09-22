@@ -36,7 +36,9 @@ instead of aborting the entire search.
 Archive transcription is available as an explicit background backfill. Starting it returns
 immediately, works newest-first, resumes from cached transcripts, and skips known failures unless a
 retry is requested. ChatGPT reports a concise progress summary when the job starts and whenever the
-user asks for backfill status. It cannot post unsolicited messages after a ChatGPT turn has ended.
+user asks for backfill status. It checks the current state before offering to start again, so a
+running or completed job can be reported without another Start approval. It cannot post unsolicited
+messages after a ChatGPT turn has ended.
 
 ## Install on the Mac
 

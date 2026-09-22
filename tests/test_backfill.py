@@ -87,3 +87,12 @@ def test_backfill_stops_after_first_filesystem_permission_error(
     assert status["failed"] == 0
     assert status["remaining"] == 2
     assert "blocked by macOS permission" in status["summary"]
+
+
+def test_starting_summary_does_not_report_zero_target() -> None:
+    result = BackfillManager._with_summary(
+        {"status": "starting", "completed": 0, "target_count": 0, "remaining": 0}
+    )
+
+    assert "counting pending recordings" in result["summary"]
+    assert "0/0" not in result["summary"]
