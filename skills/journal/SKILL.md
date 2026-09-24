@@ -41,7 +41,7 @@ Reflection is opt-in. Use it when the user asks to reflect on, unpack, understan
 
 Treat the transcript as a spoken journal entry. Help the user understand what they are feeling and thinking and structure their thoughts. Quote sparingly. Help them understand the entry rather than merely summarize it. Identify the central concern, emotional logic, recurring pattern, tension or contradiction, and the most useful question or next step. Distinguish observation from inference. Do not medicalize ordinary uncertainty or force every reflection into productivity advice.
 
-After a requested reflection, suggest a concise chat title in the format `YYYY-MM-DD — Short specific theme`, using the entry's recording date and its central subject. Title generation is also opt-in: omit it when the user asks for no title.
+After a requested reflection, use the entry's recording date and central theme to give the chat a concise title in the format `MMM D, YYYY — Short specific description`, such as `Jan 5, 2026 — Learning to Trust Myself`. Use the entry's date, not today's date. If the host supports renaming the current chat, set that title; otherwise present the exact text as a suggested chat title without implying the chat was renamed. Title generation is opt-in: omit it when the user asks for no title.
 
 ## Track completion
 
