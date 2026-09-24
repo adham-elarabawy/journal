@@ -13,6 +13,15 @@ from .models import Memo
 AUDIO_EXTENSIONS = {".m4a", ".mp4", ".caf", ".wav", ".aac", ".mp3"}
 
 
+def _raise_scan_error(error: OSError) -> None:
+    if isinstance(error, PermissionError):
+        raise PermissionError(
+            "macOS denied access to the Voice Memos recordings folder. "
+            "Grant Full Disk Access to the Journal tunnel process."
+        ) from error
+    raise error
+
+
 def candidate_recordings_dirs() -> list[Path]:
     home = Path.home()
     return [
@@ -135,9 +144,10 @@ def scan_voice_memos(override: Path | None = None, limit: int | None = None) -> 
     root = resolve_recordings_dir(override)
     metadata = _metadata_from_databases(root)
     files = [
-        path
-        for path in root.rglob("*")
-        if path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS
+        Path(directory) / name
+        for directory, _, names in os.walk(root, onerror=_raise_scan_error)
+        for name in names
+        if Path(name).suffix.lower() in AUDIO_EXTENSIONS
     ]
     files.sort(key=lambda path: path.stat().st_mtime_ns, reverse=True)
     if limit is not None:
@@ -164,4 +174,3 @@ def scan_voice_memos(override: Path | None = None, limit: int | None = None) -> 
             )
         )
     return memos
-

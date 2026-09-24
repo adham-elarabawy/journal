@@ -39,6 +39,21 @@ def test_analyzed_entry_remains_eligible_for_topic_search(tmp_path: Path) -> Non
     assert results[0].analyzed_at is not None
 
 
+def test_sync_tracks_fresh_scan_count_separately_from_cached_index(tmp_path: Path) -> None:
+    service = JournalService(
+        Settings(None, tmp_path / "data", "test-model"),
+        scanner=lambda _override, limit=None: [
+            Memo("old", tmp_path / "old.m4a", datetime.now(timezone.utc))
+        ],
+    )
+    assert len(service.sync()) == 1
+    assert service.last_scan_count == 1
+
+    service.scanner = lambda _override, limit=None: []
+    assert len(service.sync()) == 1
+    assert service.last_scan_count == 0
+
+
 def test_manual_status_survives_reclassification(tmp_path: Path) -> None:
     memo = Memo(
         "memo", tmp_path / "memo.m4a", datetime.now(timezone.utc), duration_seconds=120

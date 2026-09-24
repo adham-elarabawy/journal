@@ -48,9 +48,11 @@ class JournalService:
             else transcriber
         )
         self.last_find_failures: list[dict[str, object]] = []
+        self.last_scan_count: int | None = None
 
     def sync(self, limit: int = 50) -> list[Memo]:
         memos = self.scanner(self.settings.recordings_dir, limit=limit)
+        self.last_scan_count = len(memos)
         self.store.upsert_scanned(memos)
         return self.store.list_recent(limit)
 

@@ -50,9 +50,21 @@ WRITE_LOCAL = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWor
 def journal_status() -> dict[str, Any]:
     """Check whether Voice Memos can be found and report local journal index counts."""
     journal = service()
-    memos = journal.sync(limit=200)
+    discovery_error = None
+    try:
+        memos = journal.sync(limit=200)
+        recordings_found = journal.last_scan_count
+    except PermissionError:
+        memos = journal.store.list_recent(200)
+        recordings_found = None
+        discovery_error = (
+            "macOS denied access to the Voice Memos recordings folder. "
+            "Grant Full Disk Access to the Journal tunnel process, then restart it."
+        )
     return {
-        "recordings_found": len(memos),
+        "recordings_found": recordings_found,
+        "indexed_recordings": len(memos),
+        "discovery_error": discovery_error,
         "transcribed": sum(memo.transcript is not None for memo in memos),
         "journal_entries": sum(memo.journal_status == "journal" for memo in memos),
         "unanalyzed_journal_entries": sum(
