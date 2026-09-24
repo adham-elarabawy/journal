@@ -42,7 +42,9 @@ messages after a ChatGPT turn has ended.
 
 ## Install on the Mac
 
-Requirements: macOS, Python 3.11+, an OpenAI API key, Voice Memos enabled in iCloud, and `ffmpeg` for recordings larger than 25 MB. Install `ffmpeg` with `brew install ffmpeg` if needed.
+Requirements: macOS, Python 3.11+, an OpenAI API key, Voice Memos enabled in iCloud, and `ffmpeg` for `.qta` recordings or recordings larger than 25 MB. Install `ffmpeg` with `brew install ffmpeg` if needed.
+
+Journal discovers `.qta` Voice Memos as well as older audio formats, reads their saved titles and recording dates, and avoids importing playback caches as duplicate entries. Before transcription, it extracts the standard audio track from a `.qta` file into a temporary `.m4a`, preserving the original recording. If needed, it compresses that track to fit one upload; only recordings that still exceed 25 MB are split into resumable chunks.
 
 ```sh
 ./scripts/install_macos.sh

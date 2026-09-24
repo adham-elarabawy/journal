@@ -10,7 +10,7 @@ from typing import Any
 from .models import Memo
 
 
-AUDIO_EXTENSIONS = {".m4a", ".mp4", ".caf", ".wav", ".aac", ".mp3"}
+AUDIO_EXTENSIONS = {".m4a", ".mp4", ".caf", ".wav", ".aac", ".mp3", ".qta"}
 
 
 def _raise_scan_error(error: OSError) -> None:
@@ -101,10 +101,13 @@ def _metadata_from_databases(root: Path) -> dict[str, dict[str, Any]]:
                 )
                 if not id_col and not path_col:
                     continue
-                title_col = next(
-                    (upper[key] for key in ("ZCUSTOMLABEL", "ZTITLE", "ZLABEL") if key in upper),
-                    None,
-                )
+                # CloudKit's encrypted title field can be text in the local DB.
+                # New recordings may keep only a timestamp in ZCUSTOMLABEL.
+                title_cols = [
+                    upper[key]
+                    for key in ("ZENCRYPTEDTITLE", "ZCUSTOMLABEL", "ZTITLE", "ZLABEL")
+                    if key in upper
+                ]
                 date_col = next(
                     (upper[key] for key in ("ZDATE", "ZCREATIONDATE", "ZSTARTDATE") if key in upper),
                     None,
@@ -113,7 +116,7 @@ def _metadata_from_databases(root: Path) -> dict[str, dict[str, Any]]:
                     (upper[key] for key in ("ZDURATION", "ZLENGTH") if key in upper),
                     None,
                 )
-                selected = [column for column in (id_col, path_col, title_col, date_col, duration_col) if column]
+                selected = [column for column in (id_col, path_col, *title_cols, date_col, duration_col) if column]
                 quoted = ", ".join(f'"{column}"' for column in selected)
                 try:
                     rows = connection.execute(f'SELECT {quoted} FROM "{table}"')
@@ -127,9 +130,15 @@ def _metadata_from_databases(root: Path) -> dict[str, dict[str, Any]]:
                             value = str(record[column])
                             keys.update((value, Path(value).stem, Path(value).name))
                     value = {
-                        "title": str(record[title_col]) if title_col and record.get(title_col) else None,
+                        "title": next(
+                            (record[column] for column in title_cols
+                             if isinstance(record.get(column), str) and record[column].strip()),
+                            None,
+                        ),
                         "recorded_at": _core_data_datetime(record.get(date_col)) if date_col else None,
                         "duration_seconds": float(record[duration_col]) if duration_col and record.get(duration_col) else None,
+                        "source_path": record.get(path_col) if path_col else None,
+                        "identifier": record.get(id_col) if id_col else None,
                     }
                     for key in keys:
                         metadata[key.lower()] = value
@@ -149,28 +158,45 @@ def scan_voice_memos(override: Path | None = None, limit: int | None = None) -> 
         for name in names
         if Path(name).suffix.lower() in AUDIO_EXTENSIONS
     ]
-    files.sort(key=lambda path: path.stat().st_mtime_ns, reverse=True)
-    if limit is not None:
-        files = files[: max(0, limit)]
-
-    memos: list[Memo] = []
+    memos: dict[str, Memo] = {}
+    priorities: dict[str, int] = {}
     for path in files:
+        # ApplicationAssets contains playback caches and intermediate tracks.
+        # A composed asset can be a fallback, but is not a separate recording.
+        cached_asset = "ApplicationAssets" in path.relative_to(root).parts
+        if cached_asset and path.stem != "composedAsset":
+            continue
         stat = path.stat()
         memo_id = _stable_id(path)
         details = (
             metadata.get(memo_id.lower())
             or metadata.get(path.name.lower())
             or metadata.get(path.stem.lower())
+            or (metadata.get(path.parent.name.lower()) if cached_asset else None)
             or {}
         )
-        memos.append(
-            Memo(
-                memo_id=memo_id,
-                path=path,
-                recorded_at=details.get("recorded_at")
-                or datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
-                title=details.get("title") or (path.stem if not path.stem.isupper() else None),
-                duration_seconds=details.get("duration_seconds"),
-            )
+        source_path = Path(details["source_path"]) if details.get("source_path") else None
+        if source_path is not None and not source_path.is_absolute():
+            source_path = root / source_path
+        if cached_asset:
+            if source_path is None:
+                continue
+            if source_path.exists() or len(source_path.stem) >= 16:
+                memo_id = _stable_id(source_path)
+            else:
+                memo_id = str(details.get("identifier") or path.parent.name)
+        priority = 0 if path == source_path else (2 if cached_asset else 1)
+        if memo_id in priorities and priorities[memo_id] <= priority:
+            continue
+        priorities[memo_id] = priority
+        memos[memo_id] = Memo(
+            memo_id=memo_id,
+            path=path,
+            recorded_at=details.get("recorded_at")
+            or datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
+            title=details.get("title") or (path.stem if not path.stem.isupper() else None),
+            duration_seconds=details.get("duration_seconds"),
         )
-    return memos
+    # iCloud downloads and playback can update file mtimes long after recording.
+    recent = sorted(memos.values(), key=lambda memo: memo.recorded_at, reverse=True)
+    return recent if limit is None else recent[: max(0, limit)]

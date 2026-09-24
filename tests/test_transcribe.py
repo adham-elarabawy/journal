@@ -82,3 +82,27 @@ def test_api_error_includes_status_request_and_body(tmp_path: Path, monkeypatch)
     assert "400" in message
     assert "req_test" in message
     assert "bad audio" in message
+
+
+@pytest.mark.parametrize("remux_returncode,remux_size", [(0, 1), (0, 20), (1, 0)])
+def test_qta_prepared_as_single_m4a_upload(tmp_path, monkeypatch, remux_returncode, remux_size):
+    audio = tmp_path / "memo.qta"
+    audio.write_bytes(b"original spatial recording")
+    monkeypatch.setattr(transcribe, "MAX_UPLOAD_BYTES", 10)
+    monkeypatch.setattr(transcribe.shutil, "which", lambda _: "/ffmpeg")
+    commands = []
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        is_remux = "copy" in command
+        Path(command[-1]).write_bytes(b"x" * (remux_size if is_remux else 1))
+        return SimpleNamespace(returncode=remux_returncode if is_remux else 0, stderr="")
+
+    monkeypatch.setattr(transcribe.subprocess, "run", fake_run)
+    api = install_fake_openai(monkeypatch, ["transcript"])
+    assert transcribe.transcribe_audio(audio, "test-model") == "transcript"
+    assert len(api.calls) == 1
+    assert Path(api.calls[0]["file"].name).suffix == ".m4a"
+    assert all(command[command.index("-map") + 1] == "0:a:0" for command in commands)
+    assert len(commands) == (1 if remux_returncode == 0 and remux_size <= 10 else 2)
+    assert audio.read_bytes() == b"original spatial recording"

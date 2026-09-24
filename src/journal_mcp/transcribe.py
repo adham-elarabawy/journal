@@ -17,6 +17,28 @@ MAX_UPLOAD_BYTES = 25_000_000
 CHUNK_SECONDS = 10 * 60
 
 
+def _prepare_qta_audio(path: Path, output_dir: Path) -> Path:
+    """Extract the standard audio track from a Voice Memos spatial container."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError("Importing .qta Voice Memos requires ffmpeg. Install it with `brew install ffmpeg`.")
+    output = output_dir / "recording.m4a"
+    base = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-i", str(path),
+            "-map", "0:a:0", "-vn", "-map_metadata", "-1"]
+    # Preserve the existing AAC track when possible; discard spatial/data tracks.
+    remux = subprocess.run(base + ["-c:a", "copy", str(output)], capture_output=True, text=True)
+    if remux.returncode == 0 and output.exists() and 0 < output.stat().st_size <= MAX_UPLOAD_BYTES:
+        return output
+    # Keep a single upload when the standard track is still too large.
+    compact = subprocess.run(
+        base + ["-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "48k", str(output)],
+        capture_output=True, text=True,
+    )
+    if compact.returncode != 0 or not output.exists() or output.stat().st_size == 0:
+        raise RuntimeError(f"Could not prepare {path.name} for transcription: {compact.stderr.strip()}")
+    return output
+
+
 def _source_cache_key(path: Path, model: str) -> str:
     stat = path.stat()
     material = f"{path.resolve()}\0{stat.st_size}\0{stat.st_mtime_ns}\0{model}".encode()
@@ -39,6 +61,8 @@ def _split_audio(path: Path, output_dir: Path) -> list[Path]:
         "error",
         "-i",
         str(path),
+        "-map",
+        "0:a:0",
         "-vn",
         "-ac",
         "1",
@@ -114,6 +138,14 @@ def _write_text_atomically(path: Path, text: str) -> None:
 
 
 def transcribe_audio(path: Path, model: str, *, cache_dir: Path | None = None) -> str:
+    if path.suffix.lower() == ".qta":
+        with tempfile.TemporaryDirectory(prefix="journal-qta-") as temporary:
+            prepared = _prepare_qta_audio(path, Path(temporary))
+            return _transcribe_uploads(prepared, model, cache_dir=cache_dir, source_path=path)
+    return _transcribe_uploads(path, model, cache_dir=cache_dir, source_path=path)
+
+
+def _transcribe_uploads(path: Path, model: str, *, cache_dir: Path | None, source_path: Path) -> str:
     try:
         from openai import OpenAI
     except ImportError as exc:
@@ -126,7 +158,7 @@ def transcribe_audio(path: Path, model: str, *, cache_dir: Path | None = None) -
         return _transcribe_file(client, path, model)
 
     root = cache_dir or (Path.home() / ".cache" / "journal" / "transcription-parts")
-    transcript_cache = root / _source_cache_key(path, model)
+    transcript_cache = root / _source_cache_key(source_path, model)
     transcript_cache.mkdir(parents=True, exist_ok=True)
     logger.info(
         "Splitting %s (%.2f MB) into resumable transcription chunks",
